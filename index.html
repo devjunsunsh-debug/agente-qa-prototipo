@@ -1,0 +1,575 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0;font:14px system-ui}[hidden]{display:none!important}img{max-width:100%}</style></head><body><title>Agente QA Prototipo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: barra lateral de navegación + área de trabajo; en móvil la barra pasa arriba */
+:root{
+  --bg:#f3f6f5; --surface:#ffffff; --surface-2:#e9efed; --line:#d3ddda;
+  --fg:#16211f; --muted:#5a6b67;
+  --accent:#0d6b5b; --accent-ink:#ffffff; --accent-soft:#d5ebe5;
+  --petal:#b8466a;
+  --ok:#1e7a3c; --ok-soft:#dcf1e2; --warn:#9a6200; --warn-soft:#fbedd2; --bad:#b3261e; --bad-soft:#f9dedb;
+  --display:"Sora",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1514; --surface:#172120; --surface-2:#1f2c2a; --line:#2c3b38;
+  --fg:#e4ecea; --muted:#9aaca8; --accent:#4cc2a7; --accent-ink:#06201b; --accent-soft:#163a33;
+  --petal:#e98aa8; --ok:#6fd38e; --ok-soft:#163521; --warn:#f0b24f; --warn-soft:#3a2b10; --bad:#f28b82; --bad-soft:#3d1a18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#172120; --surface-2:#1f2c2a; --line:#2c3b38;
+  --fg:#e4ecea; --muted:#9aaca8; --accent:#4cc2a7; --accent-ink:#06201b; --accent-soft:#163a33;
+  --petal:#e98aa8; --ok:#6fd38e; --ok-soft:#163521; --warn:#f0b24f; --warn-soft:#3a2b10; --bad:#f28b82; --bad-soft:#3d1a18; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.25}
+h1{font-size:1.5rem} h2{font-size:1.15rem} h3{font-size:1rem}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-size:.85em}
+.muted{color:var(--muted)}
+.label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* Login */
+.login{min-height:100%;display:grid;place-items:center;padding-block:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.login-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:32px;display:grid;gap:18px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:36px;height:36px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-family:var(--display);font-weight:700}
+.brand b{font-family:var(--display);font-size:1.1rem}
+.field{display:grid;gap:6px}
+.field label{font-weight:500;font-size:.9rem}
+input[type=text],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 11px}
+textarea{resize:vertical;min-height:90px;font-family:var(--body)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 14px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:5px 10px;font-size:.85rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.note{background:var(--surface-2);border-radius:6px;padding:10px 12px;font-size:.85rem;color:var(--muted)}
+
+/* Shell */
+#app{min-height:100%}
+.shell{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:22px}
+.nav{display:grid;gap:4px}
+.nav button{text-align:left;border:0;background:none;padding:9px 12px;border-radius:6px;color:var(--muted);font-weight:500}
+.nav button:hover{background:var(--surface-2);color:var(--fg)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.user{margin-top:auto;display:grid;gap:8px;font-size:.85rem}
+.main{padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));min-width:0}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:20px}
+.head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+.head .sub{color:var(--muted);margin-top:4px}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.toolbar .field{min-width:160px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:14px;min-width:0;align-content:start}
+
+/* PBI table */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.neutral{background:var(--surface-2);color:var(--muted)} .pill.acc{background:var(--accent-soft);color:var(--accent)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+
+/* Detail */
+.grid2{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px}
+.ac-list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.ac-list li{border-left:3px solid var(--line);padding:6px 10px;background:var(--bg);border-radius:0 6px 6px 0;font-size:.92rem}
+.ac-list li.ok{border-color:var(--ok)} .ac-list li.warn{border-color:var(--warn)} .ac-list li.bad{border-color:var(--bad)}
+.score{display:flex;gap:18px;align-items:center}
+.gauge{--v:0;width:110px;height:110px;border-radius:50%;background:conic-gradient(var(--c,var(--accent)) calc(var(--v)*1%),var(--surface-2) 0);display:grid;place-items:center;flex:none}
+.gauge span{width:84px;height:84px;border-radius:50%;background:var(--surface);display:grid;place-items:center;font-family:var(--display);font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums}
+.checks{display:grid;gap:6px;font-size:.9rem;margin:0;padding:0;list-style:none}
+.checks li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed var(--line);padding-bottom:5px}
+.checks b{font-variant-numeric:tabular-nums}
+.recs{margin:0;padding-left:18px;display:grid;gap:4px;font-size:.9rem}
+.engine{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+
+/* Cases */
+.cases{display:grid;gap:12px}
+.case{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);display:grid}
+.case.approved{border-color:var(--ok)} .case.discarded{opacity:.55}
+.case-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+.case-title{display:flex;gap:10px;align-items:baseline;min-width:0;flex:1}
+.case-title h3{font-size:.98rem}
+.case-body{padding:12px 14px;display:grid;gap:10px;font-size:.9rem}
+.steps{width:100%;min-width:0;border-collapse:collapse}
+.steps th,.steps td{padding:7px 9px;font-size:.86rem}
+.steps-wrap{overflow-x:auto}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 12px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+
+/* Metrics */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:4px}
+.tile b{font-family:var(--display);font-size:1.7rem;font-variant-numeric:tabular-nums}
+.bars{display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:130px 1fr 44px;gap:10px;align-items:center;font-size:.88rem}
+.bar .track{height:12px;background:var(--surface-2);border-radius:999px;overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:999px}
+.bar .fill.d{background:var(--petal)}
+.bar span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:16px;font-size:.82rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* Loader, modal, toast */
+.loading{display:flex;gap:12px;align-items:center;padding:16px;background:var(--accent-soft);border-radius:var(--r);color:var(--accent);font-weight:500}
+.spin{width:18px;height:18px;border:3px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s 0.8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.overlay{position:fixed;inset:0;background:rgb(0 0 0 / .45);display:grid;place-items:center;padding:16px;z-index:20}
+.modal{background:var(--surface);border-radius:12px;max-width:460px;width:100%;padding:22px;display:grid;gap:14px;border:1px solid var(--line)}
+.toast{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:12px 16px;border-radius:8px;font-weight:500;z-index:30;max-width:calc(100% - 32px)}
+.empty{text-align:center;padding:32px 16px;color:var(--muted)}
+.help ol{margin:0;padding-left:20px;display:grid;gap:6px}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .side{border-right:0;border-bottom:1px solid var(--line);flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px 16px;gap:12px}
+  .nav{display:flex;flex-wrap:wrap}
+  .user{margin-top:0;margin-left:auto}
+  .grid2{grid-template-columns:1fr}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:480px){.kv{grid-template-columns:1fr}.bar{grid-template-columns:90px 1fr 40px}}
+</style>
+
+<div id="app"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Agente QA - Prototipo funcional
+   Proyecto de Software - Actividad 4
+   Arquitectura: modelo (clases de dominio) + servicios + controlador de UI.
+   El motor de generación es simulado (técnica Mago de Oz): reemplaza
+   temporalmente al servicio de IA corporativo que tendrá el producto final.
+   ============================================================ */
+
+/* ---------- Modelo de dominio ---------- */
+class CriterioAceptacion {
+  constructor(texto){ this.texto = texto.trim(); }
+  get esGherkin(){ return /\bdado\b/i.test(this.texto) && /\bcuando\b/i.test(this.texto) && /\bentonces\b/i.test(this.texto); }
+  parte(nombre, siguiente){
+    const re = new RegExp("\\b" + nombre + "\\b\\s*(.*?)" + (siguiente ? "(?=\\b" + siguiente + "\\b)" : "$"), "i");
+    const m = this.texto.match(re); return m ? m[1].replace(/[,.;]\s*$/, "").trim() : "";
+  }
+  get dado(){ return this.parte("dado", "cuando"); }
+  get cuando(){ return this.parte("cuando", "entonces"); }
+  get entonces(){ return this.parte("entonces", null); }
+  get numeros(){ return (this.texto.match(/\d+(?:[.,]\d+)?/g) || []).map(n => Number(n.replace(",", "."))); }
+}
+
+class PBI {
+  constructor({id, titulo, modulo, sprint, descripcion, criterios, estado}){
+    this.id = id; this.titulo = titulo; this.modulo = modulo; this.sprint = sprint;
+    this.descripcion = descripcion; this.criterios = (criterios || []).map(c => new CriterioAceptacion(c));
+    this.estado = estado || "Pendiente";
+  }
+}
+
+class CasoPrueba {
+  constructor({pbiId, titulo, tipo, precondiciones, pasos, datos, prioridad}){
+    this.uid = "tmp-" + Math.random().toString(36).slice(2, 8);
+    this.pbiId = pbiId; this.titulo = titulo; this.tipo = tipo; this.precondiciones = precondiciones;
+    this.pasos = pasos; this.datos = datos; this.prioridad = prioridad;
+    this.estado = "Propuesto"; this.idAzure = null;
+  }
+}
+
+/* ---------- Servicios ---------- */
+class EvaluadorCriterios {
+  static AMBIGUAS = ["rápido","rapido","fácil","facil","amigable","adecuado","adecuada","correctamente","bien","intuitivo","intuitiva","óptimo","optimo","etc","algunos","varios","normal"];
+  evaluar(pbi){
+    const cs = pbi.criterios;
+    if(cs.length === 0){
+      return { puntaje: 0, nivel: "No listo", detalle: [], checks: {cantidad:0,estructura:0,claridad:0,medible:0},
+        recomendaciones: ["El PBI no tiene criterios de aceptación. Devuélvalo al Product Owner antes de diseñar pruebas.",
+                          "Use el formato Dado / Cuando / Entonces para cada comportamiento esperado."] };
+    }
+    const detalle = cs.map(c => {
+      const ambiguas = EvaluadorCriterios.AMBIGUAS.filter(p => new RegExp("\\b" + p + "\\b", "i").test(c.texto));
+      const nivel = c.esGherkin && ambiguas.length === 0 ? "ok" : (c.esGherkin || ambiguas.length === 0 ? "warn" : "bad");
+      return { criterio: c, ambiguas, nivel };
+    });
+    const pct = f => detalle.filter(f).length / detalle.length;
+    const checks = {
+      cantidad: cs.length >= 3 ? 20 : cs.length === 2 ? 14 : 7,
+      estructura: Math.round(40 * pct(d => d.criterio.esGherkin)),
+      claridad: Math.round(25 * pct(d => d.ambiguas.length === 0)),
+      medible: Math.round(15 * Math.min(1, pct(d => d.criterio.numeros.length > 0) * 2))
+    };
+    const puntaje = checks.cantidad + checks.estructura + checks.claridad + checks.medible;
+    const nivel = puntaje >= 70 ? "Listo para probar" : puntaje >= 40 ? "Requiere ajustes" : "No listo";
+    const recomendaciones = [];
+    if(checks.estructura < 40) recomendaciones.push("Reescriba los criterios sin estructura con el formato Dado / Cuando / Entonces.");
+    const amb = [...new Set(detalle.flatMap(d => d.ambiguas))];
+    if(amb.length) recomendaciones.push("Reemplace los términos ambiguos (" + amb.join(", ") + ") por valores verificables.");
+    if(checks.medible < 15) recomendaciones.push("Incluya valores medibles: límites, cantidades, tiempos o formatos esperados.");
+    if(cs.length < 3) recomendaciones.push("Agregue criterios para los escenarios de error y de validación de datos.");
+    if(!recomendaciones.length) recomendaciones.push("Los criterios son claros y verificables. Puede generar los casos de prueba.");
+    return { puntaje, nivel, detalle, checks, recomendaciones };
+  }
+}
+
+/* Motor de generación. En el prototipo aplica reglas sobre los criterios
+   (Mago de Oz); en el producto final esta clase delega en el servicio de IA autorizado. */
+class GeneradorCasos {
+  generar(pbi){
+    const casos = [];
+    pbi.criterios.forEach((c, i) => {
+      const n = i + 1;
+      const dado = c.dado || "el usuario autenticado en el módulo " + pbi.modulo;
+      const cuando = c.cuando || "ejecuta la funcionalidad descrita en el criterio " + n;
+      const entonces = c.entonces || c.texto;
+      casos.push(new CasoPrueba({ pbiId: pbi.id, tipo: "Positivo", prioridad: 1,
+        titulo: "CA" + n + " · Verificar que " + this.minus(entonces),
+        precondiciones: this.mayus(dado) + ".",
+        pasos: [
+          { accion: "Ingresar al módulo " + pbi.modulo + " con un usuario con permisos.", esperado: "Se muestra la pantalla principal del módulo." },
+          { accion: this.mayus(cuando) + " con datos válidos.", esperado: "El sistema procesa la solicitud sin errores." },
+          { accion: "Validar el resultado en pantalla y en el registro.", esperado: this.mayus(entonces) + "." }
+        ],
+        datos: "Datos válidos de acuerdo con la regla de negocio del criterio " + n + "." }));
+      casos.push(new CasoPrueba({ pbiId: pbi.id, tipo: "Negativo", prioridad: 2,
+        titulo: "CA" + n + " · Validar rechazo cuando los datos son inválidos o incompletos",
+        precondiciones: this.mayus(dado) + ".",
+        pasos: [
+          { accion: "Ingresar al módulo " + pbi.modulo + ".", esperado: "Se muestra la pantalla principal del módulo." },
+          { accion: this.mayus(cuando) + " dejando un campo obligatorio vacío o con formato inválido.", esperado: "El sistema no guarda la información." },
+          { accion: "Revisar el mensaje mostrado.", esperado: "Se muestra un mensaje que indica el campo con error y cómo corregirlo." }
+        ],
+        datos: "Campo obligatorio vacío; texto en un campo numérico." }));
+      const nums = c.numeros;
+      if(nums.length){
+        const v = Math.max(...nums);
+        casos.push(new CasoPrueba({ pbiId: pbi.id, tipo: "Borde", prioridad: 2,
+          titulo: "CA" + n + " · Probar valores límite alrededor de " + v,
+          precondiciones: this.mayus(dado) + ".",
+          pasos: [
+            { accion: "Ejecutar el flujo con el valor " + (v - 1) + ".", esperado: "El sistema aplica la regla para valores por debajo del límite." },
+            { accion: "Ejecutar el flujo con el valor exacto " + v + ".", esperado: "El sistema aplica la regla del límite definida en el criterio." },
+            { accion: "Ejecutar el flujo con el valor " + (v + 1) + ".", esperado: "El sistema aplica la regla para valores por encima del límite." }
+          ],
+          datos: "Valores " + (v - 1) + ", " + v + " y " + (v + 1) + "." }));
+      }
+    });
+    return casos;
+  }
+  mayus(t){ return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
+  minus(t){ return t ? t.charAt(0).toLowerCase() + t.slice(1) : t; }
+}
+
+class Repositorio {
+  static CLAVE = "agenteqa-prototipo-v1";
+  constructor(){ this.estado = this.cargar() || this.semilla(); }
+  semilla(){
+    return { usuario: null, siguienteId: 9101, publicados: [], historial: [], pbis: DATOS_DEMO.map(p => ({...p})) };
+  }
+  cargar(){ try{ const t = localStorage.getItem(Repositorio.CLAVE); return t ? JSON.parse(t) : null; }catch(e){ return null; } }
+  guardar(){ try{ localStorage.setItem(Repositorio.CLAVE, JSON.stringify(this.estado)); }catch(e){} }
+  reiniciar(){ const u = this.estado.usuario; this.estado = this.semilla(); this.estado.usuario = u; this.guardar(); }
+  get pbis(){ return this.estado.pbis.map(p => new PBI(p)); }
+  pbi(id){ const p = this.estado.pbis.find(x => x.id === id); return p ? new PBI(p) : null; }
+  agregarPBI(datos){ this.estado.pbis.unshift(datos); this.guardar(); }
+  cambiarEstadoPBI(id, estado){ const p = this.estado.pbis.find(x => x.id === id); if(p){ p.estado = estado; this.guardar(); } }
+}
+
+/* Simula la publicación en Azure Test Plans (en el producto final: API REST de Azure DevOps). */
+class ServicioAzureTestPlans {
+  constructor(repo){ this.repo = repo; }
+  publicar(pbi, casos){
+    const aprobados = casos.filter(c => c.estado === "Aprobado");
+    aprobados.forEach(c => { c.idAzure = this.repo.estado.siguienteId++; c.estado = "Publicado";
+      this.repo.estado.publicados.push({ id: c.idAzure, pbiId: pbi.id, titulo: c.titulo, tipo: c.tipo }); });
+    this.repo.estado.historial.push({ pbiId: pbi.id, modulo: pbi.modulo, generados: casos.length,
+      aprobados: aprobados.length, descartados: casos.filter(c => c.estado === "Descartado").length, fecha: new Date().toISOString() });
+    this.repo.cambiarEstadoPBI(pbi.id, "Casos publicados");
+    this.repo.guardar();
+    return aprobados;
+  }
+}
+
+class ServicioMetricas {
+  static MIN_MANUAL = 12; static MIN_REVISION = 3;
+  constructor(repo){ this.repo = repo; }
+  resumen(){
+    const h = this.repo.estado.historial;
+    const generados = h.reduce((a, x) => a + x.generados, 0);
+    const aprobados = h.reduce((a, x) => a + x.aprobados, 0);
+    const descartados = h.reduce((a, x) => a + x.descartados, 0);
+    const pbis = new Set(h.map(x => x.pbiId)).size;
+    const aceptacion = generados ? Math.round(aprobados / generados * 100) : 0;
+    const ahorro = aprobados * (ServicioMetricas.MIN_MANUAL - ServicioMetricas.MIN_REVISION);
+    const porModulo = {};
+    h.forEach(x => { porModulo[x.modulo] = porModulo[x.modulo] || {g:0,a:0}; porModulo[x.modulo].g += x.generados; porModulo[x.modulo].a += x.aprobados; });
+    return { generados, aprobados, descartados, pbis, aceptacion, ahorro, porModulo };
+  }
+}
+
+/* ---------- Datos de demostración (PBI ficticios) ---------- */
+const DATOS_DEMO = [
+  { id: 4512, modulo: "Nómina", sprint: "Sprint 24", titulo: "Registrar novedades de horas extra",
+    descripcion: "Como coordinador de nómina quiero registrar las horas extra de cada operario para que se liquiden en el periodo correcto.",
+    criterios: [
+      "Dado un operario activo, cuando el coordinador registra entre 1 y 12 horas extra en un día, entonces el sistema guarda la novedad en el periodo abierto.",
+      "Dado un operario activo, cuando se intenta registrar más de 12 horas extra en un día, entonces el sistema rechaza el registro y muestra el límite permitido.",
+      "Dado un periodo de nómina cerrado, cuando el coordinador intenta registrar una novedad, entonces el sistema bloquea el registro e informa que el periodo está cerrado."
+    ]},
+  { id: 4527, modulo: "Transporte", sprint: "Sprint 24", titulo: "Programar despacho de camiones al aeropuerto",
+    descripcion: "Como jefe de despachos quiero programar los camiones refrigerados hacia el aeropuerto para cumplir la hora de corte de la aerolínea.",
+    criterios: [
+      "Dado un despacho con cajas confirmadas, cuando se asigna un camión con capacidad de 450 cajas, entonces el sistema calcula la ocupación y la muestra en porcentaje.",
+      "El sistema debe avisar de forma adecuada cuando el camión llegue tarde."
+    ]},
+  { id: 4533, modulo: "Finanzas", sprint: "Sprint 24", titulo: "Conciliar facturas de proveedores con órdenes de compra",
+    descripcion: "Como analista contable quiero conciliar las facturas electrónicas con las órdenes de compra para pagar solo lo recibido.",
+    criterios: [
+      "Dado una factura y una orden de compra del mismo proveedor, cuando la diferencia de valor es menor o igual al 2 %, entonces el sistema marca la factura como conciliada.",
+      "Dado una factura con diferencia mayor al 2 %, cuando se ejecuta la conciliación, entonces el sistema deja la factura en estado pendiente de revisión.",
+      "Dado una factura sin orden de compra asociada, cuando se ejecuta la conciliación, entonces el sistema la reporta en la lista de excepciones."
+    ]},
+  { id: 4541, modulo: "Talento humano", sprint: "Sprint 25", titulo: "Consultar hoja de vida del empleado",
+    descripcion: "Como analista de talento humano quiero consultar la hoja de vida del empleado para validar su información.",
+    criterios: [
+      "La consulta debe cargar rápido.",
+      "La interfaz debe ser amigable e intuitiva."
+    ]},
+  { id: 4550, modulo: "Comercial", sprint: "Sprint 25", titulo: "Exportar reporte de cajas por cliente",
+    descripcion: "Como ejecutivo comercial quiero exportar el reporte de cajas despachadas por cliente.",
+    criterios: [] }
+];
+
+/* ---------- Controlador de la interfaz ---------- */
+class App {
+  constructor(raiz){
+    this.raiz = raiz; this.repo = new Repositorio();
+    this.evaluador = new EvaluadorCriterios(); this.generador = new GeneradorCasos();
+    this.azure = new ServicioAzureTestPlans(this.repo); this.metricas = new ServicioMetricas(this.repo);
+    this.vista = "pbis"; this.pbiActual = null; this.casos = []; this.editando = null; this.filtro = { sprint: "Todos", modulo: "Todos" };
+    this.render();
+  }
+  esc(t){ return String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+  toast(msg){ document.querySelector(".toast")?.remove(); const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role","status"); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3200); }
+  ir(vista, extra){ this.vista = vista; if(extra !== undefined) this.pbiActual = extra; this.render(); window.scrollTo(0, 0); }
+
+  render(){
+    if(!this.repo.estado.usuario){ this.raiz.innerHTML = this.vistaLogin(); return this.enlazarLogin(); }
+    const nav = [["pbis","Backlog de PBI"],["nuevo","Analizar PBI propio"],["metricas","Métricas"],["ayuda","Guía de uso"]];
+    const actual = this.vista === "detalle" ? "pbis" : this.vista;
+    this.raiz.innerHTML = `
+      <div class="shell">
+        <aside class="side">
+          <div class="brand"><div class="brand-mark">QA</div><b>Agente QA</b></div>
+          <nav class="nav" aria-label="Secciones">${nav.map(([k,t]) => `<button data-nav="${k}" ${actual===k?'aria-current="page"':""}>${t}</button>`).join("")}</nav>
+          <div class="user"><span class="label">Sesión</span><span>${this.esc(this.repo.estado.usuario)}</span>
+            <button class="btn sm" id="salir">Cerrar sesión</button></div>
+        </aside>
+        <main class="main"><div class="wrap">${this["vista_" + this.vista]()}</div></main>
+      </div>`;
+    this.raiz.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => this.ir(b.dataset.nav));
+    this.raiz.querySelector("#salir").onclick = () => { this.repo.estado.usuario = null; this.repo.guardar(); this.render(); };
+    this["enlazar_" + this.vista]?.();
+  }
+
+  vistaLogin(){ return `
+    <div class="login"><form class="login-card" id="form-login">
+      <div class="brand"><div class="brand-mark">QA</div><b>Agente QA</b></div>
+      <div><h1>Iniciar sesión</h1><p class="muted">Generador asistido de casos de prueba para Azure DevOps.</p></div>
+      <div class="field"><label for="usuario">Nombre del analista</label><input type="text" id="usuario" value="Camilo Alvarado (Analista QA)" required></div>
+      <div class="field"><label for="proyecto">Proyecto de Azure DevOps</label>
+        <select id="proyecto"><option>Sunshine-ERP (demo)</option><option>Sunshine-Logística (demo)</option></select></div>
+      <button class="btn primary" type="submit">Continuar con cuenta corporativa (demo)</button>
+      <p class="note">Prototipo funcional: el inicio de sesión con Microsoft (OAuth) está simulado y no se solicita ninguna contraseña. Los PBI son datos ficticios.</p>
+    </form></div>`; }
+  enlazarLogin(){
+    this.raiz.querySelector("#form-login").onsubmit = e => { e.preventDefault();
+      const u = this.raiz.querySelector("#usuario").value.trim(); if(!u) return;
+      this.repo.estado.usuario = u; this.repo.guardar(); this.vista = "pbis"; this.render(); this.toast("Sesión iniciada como " + u); };
+  }
+
+  pillEstado(e){ const m = {"Pendiente":"neutral","Casos publicados":"ok","En revisión":"acc"}; return `<span class="pill ${m[e]||"neutral"}">${this.esc(e)}</span>`; }
+  pillNivel(ev){ const c = ev.puntaje >= 70 ? "ok" : ev.puntaje >= 40 ? "warn" : "bad"; return `<span class="pill ${c}">${ev.puntaje} · ${ev.nivel}</span>`; }
+
+  vista_pbis(){
+    const todos = this.repo.pbis;
+    const sprints = ["Todos", ...new Set(todos.map(p => p.sprint))], modulos = ["Todos", ...new Set(todos.map(p => p.modulo))];
+    const lista = todos.filter(p => (this.filtro.sprint==="Todos"||p.sprint===this.filtro.sprint) && (this.filtro.modulo==="Todos"||p.modulo===this.filtro.modulo));
+    return `
+      <div class="head"><div><h1>Backlog de PBI</h1><p class="sub">Elementos del backlog leídos desde Azure DevOps. Seleccione uno para evaluar sus criterios y generar casos de prueba.</p></div>
+        <div class="toolbar">
+          <div class="field"><label for="f-sprint" class="label">Sprint</label><select id="f-sprint">${sprints.map(s=>`<option ${s===this.filtro.sprint?"selected":""}>${s}</option>`).join("")}</select></div>
+          <div class="field"><label for="f-modulo" class="label">Módulo</label><select id="f-modulo">${modulos.map(s=>`<option ${s===this.filtro.modulo?"selected":""}>${s}</option>`).join("")}</select></div>
+        </div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Título</th><th>Módulo</th><th>Criterios</th><th>Calidad de criterios</th><th>Estado</th><th></th></tr></thead>
+        <tbody>${lista.map(p => { const ev = this.evaluador.evaluar(p); return `
+          <tr><td class="mono">#${p.id}</td><td>${this.esc(p.titulo)}<div class="muted" style="font-size:.8rem">${this.esc(p.sprint)}</div></td>
+          <td>${this.esc(p.modulo)}</td><td class="mono">${p.criterios.length}</td><td>${this.pillNivel(ev)}</td><td>${this.pillEstado(p.estado)}</td>
+          <td><button class="btn sm" data-abrir="${p.id}">Abrir</button></td></tr>`; }).join("") || `<tr><td colspan="7" class="empty">No hay PBI con esos filtros.</td></tr>`}</tbody>
+      </table></div>`;
+  }
+  enlazar_pbis(){
+    this.raiz.querySelector("#f-sprint").onchange = e => { this.filtro.sprint = e.target.value; this.render(); };
+    this.raiz.querySelector("#f-modulo").onchange = e => { this.filtro.modulo = e.target.value; this.render(); };
+    this.raiz.querySelectorAll("[data-abrir]").forEach(b => b.onclick = () => { this.casos = []; this.editando = null; this.ir("detalle", Number(b.dataset.abrir)); });
+  }
+
+  vista_detalle(){
+    const p = this.repo.pbi(this.pbiActual); if(!p) return `<p>PBI no encontrado.</p>`;
+    const ev = this.evaluador.evaluar(p);
+    const color = ev.puntaje >= 70 ? "var(--ok)" : ev.puntaje >= 40 ? "var(--warn)" : "var(--bad)";
+    const puede = p.criterios.length > 0;
+    const aprob = this.casos.filter(c => c.estado === "Aprobado").length;
+    const publ = this.casos.filter(c => c.estado === "Publicado").length;
+    return `
+      <div><button class="btn sm" data-nav="pbis">← Volver al backlog</button></div>
+      <div class="head"><div><span class="label mono">PBI #${p.id} · ${this.esc(p.modulo)} · ${this.esc(p.sprint)}</span><h1>${this.esc(p.titulo)}</h1></div>${this.pillEstado(p.estado)}</div>
+      <div class="grid2">
+        <section class="panel"><h2>Descripción y criterios de aceptación</h2><p>${this.esc(p.descripcion)}</p>
+          ${puede ? `<ul class="ac-list">${ev.detalle.map((d,i)=>`<li class="${d.nivel}"><b class="mono">CA${i+1}</b> ${this.esc(d.criterio.texto)}${d.ambiguas.length?`<div class="muted" style="font-size:.8rem">Términos ambiguos: ${d.ambiguas.join(", ")}</div>`:""}</li>`).join("")}</ul>`
+                  : `<p class="note">Este PBI no tiene criterios de aceptación registrados.</p>`}
+        </section>
+        <section class="panel"><h2>Evaluación de criterios</h2>
+          <div class="score"><div class="gauge" style="--v:${ev.puntaje};--c:${color}"><span>${ev.puntaje}</span></div>
+            <div style="display:grid;gap:6px">${this.pillNivel(ev)}<span class="muted" style="font-size:.85rem">Puntaje de 0 a 100. Desde 70 el PBI está listo para diseñar pruebas.</span></div></div>
+          <ul class="checks"><li>Cantidad de criterios <b>${ev.checks.cantidad}/20</b></li><li>Estructura Dado/Cuando/Entonces <b>${ev.checks.estructura}/40</b></li>
+            <li>Claridad (sin términos ambiguos) <b>${ev.checks.claridad}/25</b></li><li>Valores medibles <b>${ev.checks.medible}/15</b></li></ul>
+          <div><span class="label">Recomendaciones</span><ul class="recs">${ev.recomendaciones.map(r=>`<li>${this.esc(r)}</li>`).join("")}</ul></div>
+        </section>
+      </div>
+      <section class="panel">
+        <div class="engine"><div><h2>Casos de prueba</h2><p class="muted" style="font-size:.88rem">Motor: simulado por reglas (Mago de Oz). En el producto final lo reemplaza el servicio de IA autorizado por la empresa.</p></div>
+          <div class="actions"><button class="btn primary" id="generar" ${puede?"":"disabled"}>${this.casos.length?"Volver a generar":"Generar casos de prueba"}</button></div></div>
+        <div id="zona-casos">${this.casos.length ? this.vistaCasos() : `<p class="empty">${puede?"Aún no hay casos. Pulse Generar casos de prueba.":"No se pueden generar casos sin criterios de aceptación. Devuelva el PBI al Product Owner."}</p>`}</div>
+        ${this.casos.length ? `<div class="engine" style="border-top:1px solid var(--line);padding-top:14px">
+          <span class="muted">${publ ? publ + " publicados · " : ""}${aprob} de ${this.casos.length} casos aprobados pendientes de publicar</span>
+          <div class="actions"><button class="btn" id="aprobar-todos">Aprobar todos</button><button class="btn" id="copiar-csv">Copiar como CSV</button>
+          <button class="btn primary" id="publicar" ${aprob?"":"disabled"}>Publicar en Azure Test Plans</button></div></div>` : ""}
+      </section>`;
+  }
+  vistaCasos(){
+    const pillTipo = t => `<span class="pill ${t==="Positivo"?"ok":t==="Negativo"?"bad":"warn"}">${t}</span>`;
+    return `<div class="cases">${this.casos.map(c => { const ed = this.editando === c.uid; return `
+      <article class="case ${c.estado==="Aprobado"||c.estado==="Publicado"?"approved":""} ${c.estado==="Descartado"?"discarded":""}">
+        <div class="case-head"><div class="case-title">${pillTipo(c.tipo)}${ed?`<input type="text" id="ed-titulo" value="${this.esc(c.titulo)}">`:`<h3>${this.esc(c.titulo)}</h3>`}</div>
+          <span class="pill ${c.estado==="Aprobado"?"ok":c.estado==="Descartado"?"bad":c.estado==="Publicado"?"acc":"neutral"}">${c.estado}${c.idAzure?" · TC "+c.idAzure:""}</span></div>
+        <div class="case-body">
+          <dl class="kv"><dt>Precondiciones</dt><dd>${this.esc(c.precondiciones)}</dd><dt>Datos de prueba</dt><dd>${ed?`<input type="text" id="ed-datos" value="${this.esc(c.datos)}">`:this.esc(c.datos)}</dd><dt>Prioridad</dt><dd>${c.prioridad}</dd></dl>
+          <div class="steps-wrap"><table class="steps"><thead><tr><th>#</th><th>Acción</th><th>Resultado esperado</th></tr></thead>
+            <tbody>${c.pasos.map((s,i)=>`<tr><td class="mono">${i+1}</td><td>${this.esc(s.accion)}</td><td>${ed?`<input type="text" data-esp="${i}" value="${this.esc(s.esperado)}">`:this.esc(s.esperado)}</td></tr>`).join("")}</tbody></table></div>
+          ${c.estado==="Publicado"?"":`<div class="actions">${ed?`<button class="btn primary sm" data-guardar="${c.uid}">Guardar cambios</button><button class="btn sm" data-cancelar="1">Cancelar</button>`:
+            `<button class="btn sm" data-aprobar="${c.uid}">${c.estado==="Aprobado"?"Quitar aprobación":"Aprobar"}</button><button class="btn sm" data-editar="${c.uid}">Editar</button><button class="btn sm danger" data-descartar="${c.uid}">${c.estado==="Descartado"?"Restaurar":"Descartar"}</button>`}</div>`}
+        </div></article>`; }).join("")}</div>`;
+  }
+  enlazar_detalle(){
+    const p = this.repo.pbi(this.pbiActual); if(!p) return;
+    const q = s => this.raiz.querySelector(s);
+    q("#generar")?.addEventListener("click", () => {
+      q("#zona-casos").innerHTML = `<div class="loading"><div class="spin"></div>Analizando criterios y generando casos de prueba…</div>`;
+      q("#generar").disabled = true;
+      setTimeout(() => { this.casos = this.generador.generar(p); this.repo.cambiarEstadoPBI(p.id, "En revisión"); this.render(); this.toast(this.casos.length + " casos generados para revisión"); }, 1200);
+    });
+    const buscar = uid => this.casos.find(c => c.uid === uid);
+    this.raiz.querySelectorAll("[data-aprobar]").forEach(b => b.onclick = () => { const c = buscar(b.dataset.aprobar); c.estado = c.estado==="Aprobado"?"Propuesto":"Aprobado"; this.render(); });
+    this.raiz.querySelectorAll("[data-descartar]").forEach(b => b.onclick = () => { const c = buscar(b.dataset.descartar); c.estado = c.estado==="Descartado"?"Propuesto":"Descartado"; this.render(); });
+    this.raiz.querySelectorAll("[data-editar]").forEach(b => b.onclick = () => { this.editando = b.dataset.editar; this.render(); });
+    this.raiz.querySelectorAll("[data-cancelar]").forEach(b => b.onclick = () => { this.editando = null; this.render(); });
+    this.raiz.querySelectorAll("[data-guardar]").forEach(b => b.onclick = () => { const c = buscar(b.dataset.guardar);
+      c.titulo = q("#ed-titulo").value.trim() || c.titulo; c.datos = q("#ed-datos").value.trim();
+      this.raiz.querySelectorAll("[data-esp]").forEach(i => c.pasos[Number(i.dataset.esp)].esperado = i.value.trim());
+      c.estado = "Aprobado"; this.editando = null; this.render(); this.toast("Caso editado y aprobado"); });
+    q("#aprobar-todos")?.addEventListener("click", () => { this.casos.forEach(c => { if(c.estado==="Propuesto") c.estado = "Aprobado"; }); this.render(); });
+    q("#copiar-csv")?.addEventListener("click", () => {
+      const filas = [["PBI","Tipo","Título","Precondiciones","Paso","Acción","Resultado esperado","Estado"]];
+      this.casos.forEach(c => c.pasos.forEach((s,i) => filas.push([c.pbiId,c.tipo,c.titulo,c.precondiciones,i+1,s.accion,s.esperado,c.estado])));
+      const csv = filas.map(f => f.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(";")).join("\n");
+      navigator.clipboard.writeText(csv).then(() => this.toast("Casos copiados como CSV"), () => this.toast("No se pudo copiar. Su navegador bloqueó el portapapeles."));
+    });
+    q("#publicar")?.addEventListener("click", () => this.confirmarPublicacion(p));
+  }
+  confirmarPublicacion(p){
+    const n = this.casos.filter(c => c.estado === "Aprobado").length;
+    const ov = document.createElement("div"); ov.className = "overlay";
+    ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-t"><h2 id="m-t">Publicar ${n} casos en Azure Test Plans</h2>
+      <p>Se crearán ${n} casos de prueba vinculados al PBI #${p.id}. Los casos descartados o sin aprobar no se publican.</p>
+      <div class="actions" style="justify-content:flex-end"><button class="btn" id="m-no">Cancelar</button><button class="btn primary" id="m-si">Publicar</button></div></div>`;
+    document.body.appendChild(ov);
+    ov.querySelector("#m-no").onclick = () => ov.remove();
+    ov.querySelector("#m-si").onclick = () => { const pub = this.azure.publicar(p, this.casos); ov.remove(); this.render();
+      this.toast("Publicados " + pub.length + " casos: TC " + pub[0].idAzure + (pub.length>1?" a TC " + pub[pub.length-1].idAzure:"")); };
+    ov.querySelector("#m-si").focus();
+  }
+
+  vista_nuevo(){ return `
+    <div class="head"><div><h1>Analizar un PBI propio</h1><p class="sub">Escriba o pegue un PBI para evaluar sus criterios de aceptación y generar casos. Use una línea por criterio.</p></div></div>
+    <form class="panel" id="form-pbi">
+      <div class="grid2"><div class="field"><label for="n-titulo">Título del PBI</label><input type="text" id="n-titulo" value="Aprobar solicitud de vacaciones" required></div>
+        <div class="field"><label for="n-modulo">Módulo</label><select id="n-modulo"><option>Talento humano</option><option>Nómina</option><option>Finanzas</option><option>Transporte</option><option>Comercial</option></select></div></div>
+      <div class="field"><label for="n-desc">Descripción</label><textarea id="n-desc">Como jefe de área quiero aprobar o rechazar las solicitudes de vacaciones de mi equipo.</textarea></div>
+      <div class="field"><label for="n-ca">Criterios de aceptación (uno por línea)</label><textarea id="n-ca" rows="5">Dado un empleado con 15 días disponibles, cuando el jefe aprueba una solicitud de 5 días, entonces el sistema descuenta los días y notifica al empleado.
+Dado una solicitud que supera los días disponibles, cuando el jefe intenta aprobarla, entonces el sistema la bloquea y muestra el saldo actual.</textarea></div>
+      <div class="actions"><button class="btn primary" type="submit">Agregar y analizar</button></div>
+    </form>`; }
+  enlazar_nuevo(){
+    this.raiz.querySelector("#form-pbi").onsubmit = e => { e.preventDefault(); const v = id => this.raiz.querySelector(id).value.trim();
+      const id = Math.max(...this.repo.estado.pbis.map(p => p.id)) + 1;
+      this.repo.agregarPBI({ id, titulo: v("#n-titulo"), modulo: v("#n-modulo"), sprint: "Ingresado manualmente", descripcion: v("#n-desc"),
+        criterios: v("#n-ca").split("\n").map(s => s.trim()).filter(Boolean) });
+      this.casos = []; this.toast("PBI #" + id + " agregado"); this.ir("detalle", id); };
+  }
+
+  vista_metricas(){
+    const m = this.metricas.resumen(); const h = this.repo.estado.historial;
+    const max = Math.max(1, ...Object.values(m.porModulo).map(x => x.g));
+    return `
+      <div class="head"><div><h1>Métricas del piloto</h1><p class="sub">Indicadores calculados con los casos publicados en esta sesión de prueba.</p></div><button class="btn sm danger" id="reiniciar">Reiniciar datos de demostración</button></div>
+      <div class="tiles">
+        <div class="tile"><span class="label">PBI procesados</span><b>${m.pbis}</b></div>
+        <div class="tile"><span class="label">Casos generados</span><b>${m.generados}</b></div>
+        <div class="tile"><span class="label">Aceptación</span><b>${m.aceptacion} %</b><span class="muted" style="font-size:.8rem">Meta CA3: 70 %</span></div>
+        <div class="tile"><span class="label">Tiempo ahorrado</span><b>${m.ahorro} min</b><span class="muted" style="font-size:.8rem">${ServicioMetricas.MIN_MANUAL} min manual vs ${ServicioMetricas.MIN_REVISION} min de revisión por caso</span></div>
+      </div>
+      <div class="grid2">
+        <section class="panel"><h2>Casos por módulo</h2>
+          <div class="legend"><span><i style="background:var(--accent)"></i>Aprobados</span><span><i style="background:var(--petal)"></i>Generados</span></div>
+          ${Object.keys(m.porModulo).length ? `<div class="bars">${Object.entries(m.porModulo).map(([k,x]) => `
+            <div class="bar"><span>${this.esc(k)}</span><div class="track"><div class="fill d" style="width:${x.g/max*100}%"></div></div><span>${x.g}</span></div>
+            <div class="bar"><span></span><div class="track"><div class="fill" style="width:${x.a/max*100}%"></div></div><span>${x.a}</span></div>`).join("")}</div>`
+            : `<p class="empty">Todavía no hay publicaciones. Genere y publique casos desde un PBI.</p>`}
+        </section>
+        <section class="panel"><h2>Historial de publicaciones</h2>
+          ${h.length ? `<div class="steps-wrap"><table class="steps"><thead><tr><th>PBI</th><th>Módulo</th><th>Generados</th><th>Aprobados</th><th>Descartados</th></tr></thead>
+            <tbody>${h.slice().reverse().map(x => `<tr><td class="mono">#${x.pbiId}</td><td>${this.esc(x.modulo)}</td><td class="mono">${x.generados}</td><td class="mono">${x.aprobados}</td><td class="mono">${x.descartados}</td></tr>`).join("")}</tbody></table></div>`
+            : `<p class="empty">Sin publicaciones registradas.</p>`}
+        </section>
+      </div>`;
+  }
+  enlazar_metricas(){ this.raiz.querySelector("#reiniciar").onclick = () => { this.repo.reiniciar(); this.casos = []; this.render(); this.toast("Datos de demostración reiniciados"); }; }
+
+  vista_ayuda(){ return `
+    <div class="head"><div><h1>Guía de uso</h1><p class="sub">Flujo completo del prototipo en cinco pasos.</p></div></div>
+    <section class="panel help"><ol>
+      <li>En <b>Backlog de PBI</b>, filtre por sprint o módulo y abra un PBI.</li>
+      <li>Revise la <b>evaluación de criterios</b>: puntaje, verificaciones y recomendaciones para el Product Owner.</li>
+      <li>Pulse <b>Generar casos de prueba</b>. El motor propone casos positivos, negativos y de valores límite.</li>
+      <li>Revise cada caso: <b>Aprobar</b>, <b>Editar</b> o <b>Descartar</b>. Ningún caso se publica sin revisión humana.</li>
+      <li>Pulse <b>Publicar en Azure Test Plans</b> y consulte los indicadores en <b>Métricas</b>.</li>
+    </ol>
+    <p class="note">Alcance del prototipo: la autenticación, la lectura de Azure DevOps, el servicio de IA y la publicación en Test Plans están simulados con datos ficticios. La lógica de evaluación, generación, revisión, publicación y métricas es funcional.</p></section>`; }
+}
+
+new App(document.getElementById("app"));
+</script>
+</body></html>
